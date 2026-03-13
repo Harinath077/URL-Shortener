@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -16,17 +15,31 @@ public class UrlRedirectionService {
     private final UrlMappingRepository urlMappingRepository;
     private final AnalyticsService analyticsService;
 
-    @Cacheable(value = "urls", key = "#shortUrl")
+    /**
+     * Public entry point — always logs analytics regardless of cache.
+     * Separating analytics from the cache ensures every redirect is counted,
+     * even when the URL is returned from Redis cache.
+     */
     public String getOriginalUrl(String shortUrl) {
-        Optional<UrlMapping> mappingOptional = urlMappingRepository.findByShortUrl(shortUrl);
-        
-        if (mappingOptional.isPresent()) {
-            UrlMapping mapping = mappingOptional.get();
-            analyticsService.logClickEvent(mapping);
-            return mapping.getOriginalUrl();
-        }
-        
-        throw new UrlNotFoundException(shortUrl);
+        // Step 1: URL lookup (cached in Redis)
+        String originalUrl = fetchOriginalUrl(shortUrl);
+
+        // Step 2: Analytics always runs — never skipped by cache
+        UrlMapping mapping = urlMappingRepository.findByShortUrl(shortUrl)
+                .orElseThrow(() -> new UrlNotFoundException(shortUrl));
+        analyticsService.logClickEvent(mapping);
+
+        return originalUrl;
+    }
+
+    /**
+     * Cached URL lookup — only hits the DB on a cache miss.
+     * Analytics is deliberately NOT called here so it isn't skipped on cache hits.
+     */
+    @Cacheable(value = "urls", key = "#shortUrl")
+    public String fetchOriginalUrl(String shortUrl) {
+        return urlMappingRepository.findByShortUrl(shortUrl)
+                .map(UrlMapping::getOriginalUrl)
+                .orElseThrow(() -> new UrlNotFoundException(shortUrl));
     }
 }
-
