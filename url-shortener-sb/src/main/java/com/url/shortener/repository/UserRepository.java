@@ -1,16 +1,12 @@
-package java.com.url.shortener.repository;
+package com.url.shortener.repository;
 
-// UserRepository.java
+import com.url.shortener.models.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
-}
-
-// UrlMappingRepository.java
-public interface UrlMappingRepository extends JpaRepository<UrlMapping, Long> {
-    Optional<UrlMapping> findByShortUrl(String shortUrl);
-}
-
-// ClickEventRepository.java
-public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
-    List<ClickEvent> findByUrlMapping(UrlMapping urlMapping);
 }
