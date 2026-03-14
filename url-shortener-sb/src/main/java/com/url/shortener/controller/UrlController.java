@@ -1,6 +1,7 @@
 package com.url.shortener.controller;
 
 import com.url.shortener.dto.AnalyticsResponse;
+import com.url.shortener.dto.DailyClickDto;
 import com.url.shortener.dto.UrlRequest;
 import com.url.shortener.dto.UrlResponse;
 import com.url.shortener.exception.UrlNotFoundException;
@@ -8,6 +9,7 @@ import com.url.shortener.models.UrlMapping;
 import com.url.shortener.models.User;
 import com.url.shortener.repository.UrlMappingRepository;
 import com.url.shortener.repository.UserRepository;
+import com.url.shortener.service.AnalyticsService;
 import com.url.shortener.service.UrlShorteningService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +27,8 @@ public class UrlController {
 
     private final UrlShorteningService urlShorteningService;
     private final UrlMappingRepository urlMappingRepository;
-    private final UserRepository userRepository;
+    private final UserRepository       userRepository;
+    private final AnalyticsService     analyticsService;
 
     @PostMapping("/shorten")
     public ResponseEntity<UrlResponse> shortenUrl(@Valid @RequestBody UrlRequest request, Principal principal) {
@@ -70,15 +73,22 @@ public class UrlController {
     }
 
     @GetMapping("/analytics/{shortCode}")
-    public ResponseEntity<AnalyticsResponse> getAnalytics(@PathVariable String shortCode) {
+    public ResponseEntity<AnalyticsResponse> getAnalytics(
+            @PathVariable String shortCode,
+            @RequestParam(defaultValue = "7") int days) {
+
         UrlMapping mapping = urlMappingRepository.findByShortUrl(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
+
+        // Gap-filled daily breakdown (every day present, zeros included)
+        List<DailyClickDto> dailyClicks = analyticsService.getDailyStats(shortCode, days);
 
         AnalyticsResponse response = new AnalyticsResponse(
                 mapping.getOriginalUrl(),
                 mapping.getShortUrl(),
                 mapping.getClickCount(),
-                mapping.getCreatedDate()
+                mapping.getCreatedDate(),
+                dailyClicks
         );
         return ResponseEntity.ok(response);
     }
