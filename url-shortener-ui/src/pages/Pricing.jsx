@@ -122,7 +122,7 @@ export default function Pricing() {
               ))}
             </ul>
 
-            <Link to="/register" className="btn btn-outline" style={{ justifyContent: 'center', borderRadius: 'var(--radius-lg)', padding: '12px 20px', fontSize: '0.9375rem', fontWeight: 600 }}>
+            <Link to="/register" className="btn btn-primary" style={{ justifyContent: 'center', borderRadius: 'var(--radius-lg)', padding: '12px 20px', fontSize: '0.9375rem', fontWeight: 600 }}>
               Start with Orbit
             </Link>
           </div>

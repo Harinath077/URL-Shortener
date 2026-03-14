@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [shrUrl, setShrUrl] = useState('');
+  const [expiryDays, setExpiryDays] = useState('');
   const [shortening, setShortening] = useState(false);
   const [recentResult, setRecentResult] = useState(null);
 
@@ -29,8 +30,8 @@ export default function Dashboard() {
       setLoading(true);
       const res = await api.get('/urls');
       setUrls(res.data || []);
-      // Auto-set the most recent link for the QR widget
-      if (res.data?.length > 0) setRecentResult(res.data[res.data.length - 1]);
+      // Backend already returns newest-first — use index 0
+      if (res.data?.length > 0) setRecentResult(res.data[0]);
     } catch (err) {
       addToast('Failed to load your URLs', 'error');
     } finally {
@@ -43,13 +44,22 @@ export default function Dashboard() {
     if (!shrUrl) return;
     setShortening(true);
     try {
-      const res = await api.post('/shorten', { originalUrl: shrUrl });
+      const res = await api.post('/shorten', {
+        originalUrl: shrUrl,
+        expiryDays: expiryDays ? parseInt(expiryDays) : null,
+      });
       setRecentResult(res.data);
       setShrUrl('');
+      setExpiryDays('');
       fetchUrls();
       addToast('Link created!', 'success');
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to shorten', 'error');
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.headers?.['retry-after'] || 60;
+        addToast(`Rate limit hit — retry after ${retryAfter}s`, 'error');
+      } else {
+        addToast(err.response?.data?.message || 'Failed to shorten', 'error');
+      }
     } finally {
       setShortening(false);
     }
@@ -74,16 +84,11 @@ export default function Dashboard() {
   };
 
   const totalClicks = urls.reduce((sum, u) => sum + (u.clickCount || 0), 0);
-  // Sort descending by date
-  const sortedUrls = [...urls].sort((a,b) => new Date(b.createdDate) - new Date(a.createdDate));
+  // Backend returns newest-first already — no client-side sort needed
+  const sortedUrls = urls;
 
-  // Dummy chart data mimicking a professional dashboard
-  const mockChartData = [
-    { name: 'Jan', clicks: 400 }, { name: 'Feb', clicks: 360 }, { name: 'Mar', clicks: 350 },
-    { name: 'Apr', clicks: 400 }, { name: 'May', clicks: 340 }, { name: 'Jun', clicks: 360 },
-    { name: 'Jul', clicks: 320 }, { name: 'Aug', clicks: 390 }, { name: 'Sep', clicks: 340 },
-    { name: 'Oct', clicks: 460 }, { name: 'Nov', clicks: 340 }, { name: 'Dec', clicks: 420 },
-  ];
+  // Chart uses real total click count per link as a bar chart proxy
+  // (real daily breakdown is on the individual Analytics page)
 
   return (
     <div className="dashboard-shell">
@@ -140,10 +145,13 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Chart component matching the reference */}
+                {/* Chart — real per-link click counts */}
                 <div className="chart-container-inner">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={mockChartData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                    <AreaChart
+                      data={urls.map(u => ({ name: u.shortUrl, clicks: u.clickCount }))}
+                      margin={{ top: 10, right: 0, left: -25, bottom: 0 }}
+                    >
                       <defs>
                         <linearGradient id="colorC" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#2563EB" stopOpacity={0.1}/>
@@ -180,6 +188,12 @@ export default function Dashboard() {
                       <div className="link-date">
                         <CalIcon size={12} /> {new Date(u.createdDate).toLocaleString()}
                         <span className="badge badge-gray" style={{marginLeft: '12px'}}>{u.clickCount} Clicks</span>
+                        {u.expired
+                          ? <span className="badge" style={{marginLeft: '8px', background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA'}}>Expired</span>
+                          : u.expiresAt
+                            ? <span className="badge" style={{marginLeft: '8px', background: '#ECFDF5', color: '#10B981', border: '1px solid #A7F3D0'}}>Active</span>
+                            : null
+                        }
                       </div>
                     </div>
                       <div className="link-actions">
@@ -213,6 +227,18 @@ export default function Dashboard() {
                     onChange={e => setShrUrl(e.target.value)}
                     required 
                   />
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                    <input
+                      className="input"
+                      type="number"
+                      min="1"
+                      max="365"
+                      placeholder="Expires in days (optional)"
+                      value={expiryDays}
+                      onChange={e => setExpiryDays(e.target.value)}
+                      style={{ fontSize: '0.8125rem' }}
+                    />
+                  </div>
                   <button type="submit" className="btn btn-primary" disabled={shortening}>
                     {shortening ? '...' : 'Create' } <ArrowRight size={16} />
                   </button>

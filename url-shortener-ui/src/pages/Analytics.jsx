@@ -13,15 +13,16 @@ export default function Analytics() {
   
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState(7);
 
   useEffect(() => {
     fetchStats();
-  }, [code]);
+  }, [code, days]);
 
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/analytics/${code}`);
+      const res = await api.get(`/analytics/${code}?days=${days}`);
       setData(res.data);
     } catch (err) {
       addToast('Failed to load analytics', 'error');
@@ -47,16 +48,13 @@ export default function Analytics() {
     }
   };
 
-  // Mock timeline data to visualize chart since click_events lack a specific timeseries API right now
-  const mockChartData = [
-    { name: 'Mon', clicks: Math.floor((data?.clickCount || 0) * 0.1) },
-    { name: 'Tue', clicks: Math.floor((data?.clickCount || 0) * 0.15) },
-    { name: 'Wed', clicks: Math.floor((data?.clickCount || 0) * 0.25) },
-    { name: 'Thu', clicks: Math.floor((data?.clickCount || 0) * 0.2) },
-    { name: 'Fri', clicks: Math.floor((data?.clickCount || 0) * 0.1) },
-    { name: 'Sat', clicks: Math.floor((data?.clickCount || 0) * 0.05) },
-    { name: 'Sun', clicks: Math.floor((data?.clickCount || 0) * 0.15) },
-  ];
+  // Real daily stats from backend — gap-filled so every day has an entry
+  const chartData = (data?.dailyClicks || []).map(d => ({
+    name: new Date(d.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
+    clicks: d.clickCount,
+  }));
+
+  const peakDay = chartData.reduce((max, d) => d.clicks > (max?.clicks ?? -1) ? d : max, null);
 
   if (loading) {
     return (
@@ -143,47 +141,53 @@ export default function Analytics() {
             </table>
           </div>
 
-          <div className="chart-card">
+            <div className="chart-card">
             <div className="chart-header">
-              <h3>Engagement Metrics (7 Days)</h3>
-              <div className="chart-tabs">
-                <button className="chart-tab active">Traffic</button>
-                <button className="chart-tab">Referrers</button>
-                <button className="chart-tab">Locations</button>
+                <h3>Engagement Metrics ({days} Days)</h3>
+                {/* 7 / 30 day toggle */}
+                <div className="chart-tabs">
+                  {[7, 30].map(d => (
+                    <button
+                      key={d}
+                      className={`chart-tab${days === d ? ' active' : ''}`}
+                      onClick={() => setDays(d)}
+                    >
+                      {d} Days
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
             <div className="chart-meta">
-              <div className="chart-metric">
-                <div className="dot" style={{background: 'var(--primary)'}}></div>
-                <span>Average Daily: <strong>{Math.floor((data?.clickCount || 0) / 7)}</strong></span>
+                <div className="chart-metric">
+                  <div className="dot" style={{background: 'var(--primary)'}}></div>
+                  <span>Avg Daily: <strong>{chartData.length ? Math.round(chartData.reduce((s,d) => s + d.clicks, 0) / chartData.length) : 0}</strong></span>
+                </div>
+                <div className="chart-metric">
+                  <div className="dot" style={{background: 'var(--success)'}}></div>
+                  <span>Peak: <strong>{peakDay?.clicks ? `${peakDay.name} (${peakDay.clicks})` : 'N/A'}</strong></span>
+                </div>
               </div>
-              <div className="chart-metric">
-                <div className="dot" style={{background: 'var(--success)'}}></div>
-                <span>Peak Traffic: <strong>Wed</strong></span>
-              </div>
-            </div>
-            
             <div style={{ height: 300, width: '100%', marginTop: '30px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748B'}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748B'}} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}}
-                    itemStyle={{ color: '#2563EB', fontWeight: 600 }}
-                  />
-                  <Area type="monotone" dataKey="clicks" stroke="#2563EB" strokeWidth={3} fillOpacity={1} fill="url(#colorClicks)" />
-                </AreaChart>
-              </ResponsiveContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748B'}} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748B'}} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}}
+                      itemStyle={{ color: '#2563EB', fontWeight: 600 }}
+                    />
+                    <Area type="monotone" dataKey="clicks" stroke="#2563EB" strokeWidth={3} fillOpacity={1} fill="url(#colorClicks)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          </div>
 
           <div className="analytics-bottom-actions">
             <button className="btn btn-danger" onClick={handleDelete}>
