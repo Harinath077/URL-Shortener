@@ -24,9 +24,14 @@ public class UrlRedirectionService {
         // Step 1: URL lookup (cached in Redis)
         String originalUrl = fetchOriginalUrl(shortUrl);
 
-        // Step 2: Analytics always runs — never skipped by cache
+        // Step 2: Ensure it hasn't expired and analytics always runs
         UrlMapping mapping = urlMappingRepository.findByShortUrl(shortUrl)
                 .orElseThrow(() -> new UrlNotFoundException(shortUrl));
+
+        if (mapping.getExpiresAt() != null && mapping.getExpiresAt().isBefore(java.time.LocalDateTime.now())) {
+            throw new com.url.shortener.exception.UrlExpiredException(shortUrl);
+        }
+
         analyticsService.logClickEvent(mapping);
 
         return originalUrl;

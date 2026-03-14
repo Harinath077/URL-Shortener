@@ -24,6 +24,7 @@ public class UrlShorteningService {
         mapping.setOriginalUrl(originalUrl);
         mapping.setUser(user);
         mapping.setCreatedDate(LocalDateTime.now());
+        mapping.setExpiresAt(LocalDateTime.now().plusDays(90));
         mapping.setClickCount(0);
 
         UrlMapping savedMapping = urlMappingRepository.save(mapping);
