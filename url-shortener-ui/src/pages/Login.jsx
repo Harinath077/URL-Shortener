@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Link2, Github, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Link2, Github, Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 
@@ -30,69 +30,67 @@ export default function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-container">
-        <div className="auth-card">
-          <Link to="/" className="auth-logo">
-            <Link2 size={24} /> short.ly
-          </Link>
-          <h2 className="auth-title">Welcome back</h2>
-          <p className="auth-subtitle">Sign in to manage your links</p>
+      <div className="auth-card">
+        <Link to="/" className="auth-logo">
+          <Link2 size={18} /> short.ly
+        </Link>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>Welcome back</h2>
+          <p style={{ fontSize: '14px', color: '#6B7280' }}>Sign in to manage your links</p>
+        </div>
 
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label className="form-label">Username / Email</label>
-              <div className="input-wrapper">
-                <Mail className="input-icon" size={18} />
-                <input 
-                  type="text" 
-                  className="input input-padded" 
-                  placeholder="name@company.com" 
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  required 
-                />
-              </div>
+        <form onSubmit={handleLogin}>
+          <div className="auth-field-group">
+            <label className="auth-label">Email or username</label>
+            <div className="auth-input-wrapper">
+              <Mail className="auth-input-icon" size={16} />
+              <input 
+                type="text" 
+                className="auth-input" 
+                placeholder="name@company.com" 
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required 
+              />
             </div>
-
-            <div className="form-group">
-              <div className="flex justify-between items-center mb-1">
-                <label className="form-label mb-0">Password</label>
-                <Link to="#" className="forgot-link">Forgot password?</Link>
-              </div>
-              <div className="input-wrapper">
-                <Lock className="input-icon" size={18} />
-                <input 
-                  type={showPass ? 'text' : 'password'} 
-                  className="input input-padded" 
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required 
-                />
-                <span className="pass-toggle" onClick={() => setShowPass(!showPass)}>
-                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                </span>
-              </div>
-            </div>
-
-            <button type="submit" className="btn btn-primary w-full" style={{ justifyContent: 'center', padding: '10px 16px', borderRadius: 8 }} disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </form>
-
-          <div style={{display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0', fontSize: '0.8125rem', color: 'var(--text-muted)'}}>
-            <div style={{flex: 1, height: 1, background: 'var(--border)'}}></div>
-            or continue with
-            <div style={{flex: 1, height: 1, background: 'var(--border)'}}></div>
           </div>
 
-          <button className="btn btn-outline w-full" style={{justifyContent: 'center', padding: '10px 16px', borderRadius: 8}}>
-            <Github size={18} /> GitHub
+          <div className="auth-field-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label className="auth-label" style={{ marginBottom: 0 }}>Password</label>
+              <Link to="#" style={{ fontSize: '13px', color: '#2563EB', fontWeight: '500', textDecoration: 'none' }} onMouseEnter={e => e.target.style.textDecoration='underline'} onMouseLeave={e => e.target.style.textDecoration='none'}>Forgot password?</Link>
+            </div>
+            <div className="auth-input-wrapper">
+              <Lock className="auth-input-icon" size={16} />
+              <input 
+                type={showPass ? 'text' : 'password'} 
+                className="auth-input" 
+                placeholder="••••••••" 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required 
+              />
+              <span className="auth-eye-toggle" onClick={() => setShowPass(!showPass)}>
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </span>
+            </div>
+          </div>
+
+          <button type="submit" className="auth-btn-primary" disabled={loading}>
+            {loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : 'Sign in'}
           </button>
+        </form>
 
-          <div style={{textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: 24}}>
-            Don't have an account? <Link to="/register" style={{color: 'var(--primary)', fontWeight: 600}}>Register free</Link>
-          </div>
+        <div className="auth-divider">
+          or continue with
+        </div>
+
+        <button className="auth-btn-github">
+          <Github size={16} color="#111827" /> Sign in with GitHub
+        </button>
+
+        <div className="auth-footer">
+          Don't have an account? <Link to="/register">Register free</Link>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Link2, Github, Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Link2, Github, Eye, EyeOff, Mail, Lock, User, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 
@@ -37,77 +37,84 @@ export default function Register() {
   };
 
   const getStrength = () => {
-    if (password.length > 8) return { width: '100%', bg: 'var(--success)' };
-    if (password.length > 5) return { width: '60%', bg: 'var(--warning)' };
-    if (password.length > 2) return { width: '30%', bg: 'var(--danger)' };
-    return { width: '0%', bg: '#e2e8f0' };
+    if (password.length > 8) return { bars: 4, text: 'Strong', color: '#10B981' };
+    if (password.length > 5) return { bars: 3, text: 'Good', color: '#3B82F6' };
+    if (password.length > 2) return { bars: 2, text: 'Fair', color: '#F59E0B' };
+    if (password.length > 0) return { bars: 1, text: 'Weak', color: '#EF4444' };
+    return { bars: 0, text: '', color: 'transparent' };
   };
+
+  const strength = getStrength();
 
   return (
     <div className="auth-page">
-      <div className="auth-container">
-        <div className="auth-card">
-          <Link to="/" className="auth-logo">
-            <Link2 size={24} /> short.ly
-          </Link>
-          <h2 className="auth-title">Create your account</h2>
-          <p className="auth-subtitle">Start shortening URLs for free</p>
+      <div className="auth-card">
+        <Link to="/" className="auth-logo">
+          <Link2 size={18} /> short.ly
+        </Link>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>Create your account</h2>
+          <p style={{ fontSize: '14px', color: '#6B7280' }}>Start shortening URLs for free</p>
+        </div>
 
-          <button className="btn btn-outline w-full" style={{justifyContent: 'center', padding: '10px 16px', borderRadius: 8, marginBottom: 16}}>
-            <Github size={18} /> Sign up with GitHub
+        <button className="auth-btn-github" style={{ marginBottom: '20px' }}>
+          <Github size={16} color="#111827" /> Sign up with GitHub
+        </button>
+
+        <div className="auth-divider">
+          or continue with email
+        </div>
+
+        <form onSubmit={handleRegister}>
+          <div className="auth-field-group">
+            <label className="auth-label">Username</label>
+            <div className="auth-input-wrapper">
+              <User className="auth-input-icon" size={16} />
+              <input type="text" className="auth-input" placeholder="johndoe" value={username} onChange={e => setUsername(e.target.value)} required />
+            </div>
+          </div>
+
+          <div className="auth-field-group">
+            <label className="auth-label">Email address</label>
+            <div className="auth-input-wrapper">
+              <Mail className="auth-input-icon" size={16} />
+              <input type="email" className="auth-input" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+          </div>
+
+          <div className="auth-field-group" style={{ marginBottom: '18px' }}>
+            <label className="auth-label">Password</label>
+            <div className="auth-input-wrapper">
+              <Lock className="auth-input-icon" size={16} />
+              <input type={showPass ? 'text' : 'password'} className="auth-input" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+              <span className="auth-eye-toggle" onClick={() => setShowPass(!showPass)}>
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </span>
+            </div>
+            {/* password strength bar */}
+            <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+              {[1, 2, 3, 4].map(idx => (
+                <div key={idx} style={{ flex: 1, height: '3px', borderRadius: '2px', background: strength.bars >= idx ? strength.color : '#E5E7EB', transition: 'background 0.3s ease' }}></div>
+              ))}
+            </div>
+            {strength.bars > 0 && <div style={{ fontSize: '12px', color: strength.color, marginTop: '4px', textAlign: 'right', fontWeight: '500' }}>{strength.text}</div>}
+          </div>
+
+          <div className="auth-field-group">
+            <label className="auth-label">Confirm password</label>
+            <div className="auth-input-wrapper">
+              <Lock className="auth-input-icon" size={16} />
+              <input type="password" className="auth-input" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+            </div>
+          </div>
+
+          <button type="submit" className="auth-btn-primary" disabled={loading}>
+            {loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : 'Create account'}
           </button>
+        </form>
 
-          <div style={{display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0', fontSize: '0.8125rem', color: 'var(--text-muted)'}}>
-            <div style={{flex: 1, height: 1, background: 'var(--border)'}}></div>
-            or continue with email
-            <div style={{flex: 1, height: 1, background: 'var(--border)'}}></div>
-          </div>
-
-          <form onSubmit={handleRegister}>
-            <div className="form-group">
-              <label className="form-label">Username</label>
-              <div className="input-wrapper">
-                <User className="input-icon" size={18} />
-                <input type="text" className="input input-padded" value={username} onChange={e => setUsername(e.target.value)} required />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <div className="input-wrapper">
-                <Mail className="input-icon" size={18} />
-                <input type="email" className="input input-padded" value={email} onChange={e => setEmail(e.target.value)} required />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label mb-1">Password</label>
-              <div className="input-wrapper">
-                <Lock className="input-icon" size={18} />
-                <input type={showPass ? 'text' : 'password'} className="input input-padded" value={password} onChange={e => setPassword(e.target.value)} required />
-                <span className="pass-toggle" onClick={() => setShowPass(!showPass)}>
-                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                </span>
-              </div>
-              <div className="strength-bar"><div className="strength-fill" style={{ width: getStrength().width, background: getStrength().bg }}></div></div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Confirm Password</label>
-              <div className="input-wrapper">
-                <Lock className="input-icon" size={18} />
-                <input type="password" className="input input-padded" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
-              </div>
-            </div>
-
-            <button type="submit" className="btn btn-primary w-full mt-2" style={{ justifyContent: 'center', padding: '10px 16px', borderRadius: 8 }} disabled={loading}>
-              {loading ? 'Creating...' : 'Create account'}
-            </button>
-          </form>
-
-          <div style={{textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: 24}}>
-            Already have an account? <Link to="/login" style={{color: 'var(--primary)', fontWeight: 600}}>Sign in</Link>
-          </div>
+        <div className="auth-footer">
+          Already have an account? <Link to="/login">Sign in</Link>
         </div>
       </div>
     </div>

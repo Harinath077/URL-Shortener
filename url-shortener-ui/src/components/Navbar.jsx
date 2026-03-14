@@ -31,7 +31,7 @@ export default function Navbar() {
         {/* Desktop Links */}
         <div className="navbar-links">
           <Link to="/" style={loc.pathname === '/' ? activeLinkStyle : navLinkStyle} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => loc.pathname !== '/' ? e.target.style.color = 'var(--text-muted)' : null}>Home</Link>
-          <a href="#features" style={{ ...navLinkStyle, display: 'flex', alignItems: 'center', gap: 4 }} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}>Features <ChevronDown size={14} /></a>
+          <Link to="/dashboard" style={loc.pathname.includes('/dashboard') ? activeLinkStyle : navLinkStyle} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => !loc.pathname.includes('/dashboard') ? e.target.style.color = 'var(--text-muted)' : null}>Analytics</Link>
           <a href="#pricing" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}>Pricing</a>
           <a href="#blog" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}>Blog</a>
         </div>
