@@ -12,5 +12,6 @@ import java.time.LocalDateTime;
 public class UrlResponse {
     private String originalUrl;
     private String shortUrl;
+    private int clickCount;
     private LocalDateTime createdDate;
 }
