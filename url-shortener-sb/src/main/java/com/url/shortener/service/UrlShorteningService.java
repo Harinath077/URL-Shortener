@@ -18,22 +18,28 @@ public class UrlShorteningService {
     private final Base62Encoder base62Encoder;
 
     @Transactional
-    public UrlMapping shortenUrl(String originalUrl, User user) {
-        // Create initial mapping to generate an ID
+    public UrlMapping shortenUrl(String originalUrl, User user, Integer expiryDays) {
         UrlMapping mapping = new UrlMapping();
         mapping.setOriginalUrl(originalUrl);
         mapping.setUser(user);
         mapping.setCreatedDate(LocalDateTime.now());
-        mapping.setExpiresAt(LocalDateTime.now().plusDays(90));
         mapping.setClickCount(0);
 
-        UrlMapping savedMapping = urlMappingRepository.save(mapping);
+        // null expiryDays = no expiry (link lives forever)
+        mapping.setExpiresAt(
+            expiryDays != null ? LocalDateTime.now().plusDays(expiryDays) : null
+        );
 
-        // Encode the generated ID to base62
-        String shortCode = base62Encoder.encode(savedMapping.getId());
-        savedMapping.setShortUrl(shortCode);
+        UrlMapping saved = urlMappingRepository.save(mapping);
 
-        // Update with the generated short URL
-        return urlMappingRepository.save(savedMapping);
+        // Encode the DB-generated ID to a compact base62 short code
+        saved.setShortUrl(base62Encoder.encode(saved.getId()));
+        return urlMappingRepository.save(saved);
+    }
+
+    // Backwards-compatible overload — used by tests / other callers
+    @Transactional
+    public UrlMapping shortenUrl(String originalUrl, User user) {
+        return shortenUrl(originalUrl, user, null);
     }
 }
