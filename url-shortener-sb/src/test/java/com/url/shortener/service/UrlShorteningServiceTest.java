@@ -51,7 +51,7 @@ class UrlShorteningServiceTest {
                 .thenReturn(firstSave)
                 .thenReturn(secondSave);
 
-        when(base62Encoder.encode(1L)).thenReturn("1");
+        when(base62Encoder.encode(1000000001L)).thenReturn("1");
     }
 
     @Test
@@ -65,7 +65,7 @@ class UrlShorteningServiceTest {
 
         // Verify repo was called twice: once for initial save, once for update with short code
         verify(urlMappingRepository, times(2)).save(any(UrlMapping.class));
-        verify(base62Encoder).encode(1L);
+        verify(base62Encoder).encode(1000000001L);
     }
 
     @Test
