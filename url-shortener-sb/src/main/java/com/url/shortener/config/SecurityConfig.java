@@ -57,7 +57,7 @@ public class SecurityConfig {
     }
 
 
-    @org.springframework.beans.factory.annotation.Value("${frontend.url:http://localhost:5173}")
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:5173}")
     private String frontendUrl;
 
     @Bean

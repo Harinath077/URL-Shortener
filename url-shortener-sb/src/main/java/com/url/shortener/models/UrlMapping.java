@@ -13,6 +13,7 @@ public class UrlMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @jakarta.persistence.Column(columnDefinition = "TEXT")
     private String originalUrl;
     private String shortUrl;
     private int clickCount = 0;
