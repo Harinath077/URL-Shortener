@@ -64,7 +64,7 @@ export default function Dashboard() {
         const retryAfter = err.response.headers?.['retry-after'] || 60;
         addToast(`Rate limit hit — retry after ${retryAfter}s`, 'error');
       } else {
-        addToast(err.response?.data?.message || 'Failed to shorten', 'error');
+        addToast(err.response?.data?.error || err.response?.data?.message || 'Failed to shorten', 'error');
       }
     } finally {
       setShortening(false);
