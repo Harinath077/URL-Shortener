@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+// Dev:  baseURL = '/api'  → Vite proxy forwards to localhost:8080 (no CORS)
+// Prod: set VITE_API_URL=https://your-backend.onrender.com/api in your host env
+const baseURL = import.meta.env.VITE_API_URL || '/api';
+
+const api = axios.create({ baseURL });
 
 // Attach JWT on every request
 api.interceptors.request.use((config) => {
@@ -9,7 +13,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401, clear token and redirect to login
+// On 401 — clear stale credentials and redirect to login
 api.interceptors.response.use(
   (res) => res,
   (err) => {
