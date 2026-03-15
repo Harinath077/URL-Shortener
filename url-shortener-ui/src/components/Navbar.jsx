@@ -33,7 +33,6 @@ export default function Navbar() {
           <Link to="/" style={loc.pathname === '/' ? activeLinkStyle : navLinkStyle} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => loc.pathname !== '/' ? e.target.style.color = 'var(--text-muted)' : null}>Home</Link>
           <Link to="/dashboard" style={loc.pathname.includes('/dashboard') ? activeLinkStyle : navLinkStyle} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => !loc.pathname.includes('/dashboard') ? e.target.style.color = 'var(--text-muted)' : null}>Analytics</Link>
           <Link to="/pricing" style={loc.pathname === '/pricing' ? activeLinkStyle : navLinkStyle} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => loc.pathname !== '/pricing' ? e.target.style.color = 'var(--text-muted)' : null}>Pricing</Link>
-          <a href="#blog" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = 'var(--text)'} onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}>Blog</a>
         </div>
 
         {/* Actions */}
