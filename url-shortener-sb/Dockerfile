@@ -7,6 +7,9 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
+RUN apt-get update && apt-get install -y dos2unix
+RUN dos2unix mvnw && chmod +x mvnw
+
 # Download dependencies (cached if pom.xml unchanged)
 RUN ./mvnw dependency:go-offline -B
 
