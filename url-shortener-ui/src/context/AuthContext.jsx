@@ -11,9 +11,10 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     const res = await api.post('/auth/login', { username, password });
-    const { token, username: uname } = res.data;
+    const { token } = res.data;
     localStorage.setItem('jwt_token', token);
-    const userObj = { username: uname };
+    // Use the username param directly — guaranteed non-null even if backend shape changes
+    const userObj = { username };
     localStorage.setItem('user_info', JSON.stringify(userObj));
     setUser(userObj);
     return res.data;
