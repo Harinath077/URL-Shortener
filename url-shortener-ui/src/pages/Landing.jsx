@@ -12,6 +12,8 @@ export default function Landing() {
   const [copied, setCopied] = useState(false);
   const addToast = useToast();
 
+  const redirectBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
   const handleShorten = async (e) => {
     e.preventDefault();
     if (!url) return;
@@ -30,7 +32,7 @@ export default function Landing() {
 
   const copyToClipboard = () => {
     if (!result) return;
-    const shortUrl = `${window.location.origin}/${result.shortUrl}`;
+    const shortUrl = `${redirectBase}/${result.shortUrl}`;
     navigator.clipboard.writeText(shortUrl);
     setCopied(true);
     addToast('Copied to clipboard!', 'success');
@@ -77,7 +79,7 @@ export default function Landing() {
               <div style={{fontSize: '0.75rem', fontWeight: 600, color: 'var(--success)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', gap: 6, alignItems: 'center'}}><Check size={14}/> READY TO SHARE</div>
               <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                 <span style={{fontFamily: 'var(--font-mono)', fontSize: '1.0625rem', color: 'var(--primary)', fontWeight: 600}}>
-                  {window.location.host}/{result.shortUrl}
+                  {redirectBase.replace('https://', '').replace('http://', '')}/{result.shortUrl}
                 </span>
                 <button className="btn btn-outline btn-sm" style={{borderRadius: 6}} onClick={copyToClipboard}>
                   {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copied' : 'Copy'}
@@ -97,7 +99,7 @@ export default function Landing() {
                 <div style={{width: 10, height: 10, borderRadius: '50%', background: '#10B981'}}></div>
               </div>
               <div style={{flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 12px', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'center'}}>
-                <Link2 size={12} style={{marginRight: 6}}/> brevly.io/aZ91K
+                <Link2 size={12} style={{marginRight: 6}}/> {redirectBase.replace('https://', '').replace('http://', '')}/aZ91K
               </div>
             </div>
             <div style={{padding: '24px'}}>

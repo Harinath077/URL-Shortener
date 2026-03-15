@@ -22,4 +22,7 @@ public class UrlMapping {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = true)
     private User user;
+
+    @OneToMany(mappedBy = "urlMapping", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private java.util.List<ClickEvent> clickEvents;
 }

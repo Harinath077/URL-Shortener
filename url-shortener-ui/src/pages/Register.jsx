@@ -30,7 +30,10 @@ export default function Register() {
       addToast('Account created successfully', 'success');
       navigate('/dashboard');
     } catch (err) {
-      addToast(err.response?.data?.message || 'Registration failed', 'error');
+      const msg = typeof err.response?.data === 'string' 
+        ? err.response.data 
+        : (err.response?.data?.message || 'Registration failed');
+      addToast(msg, 'error');
     } finally {
       setLoading(false);
     }

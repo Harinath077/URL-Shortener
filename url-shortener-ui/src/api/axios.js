@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // Dev:  baseURL = '/api'  → Vite proxy forwards to localhost:8080 (no CORS)
-// Prod: set VITE_API_URL=https://your-backend.onrender.com/api in your host env
-const baseURL = import.meta.env.VITE_API_URL || '/api';
+// Prod: set VITE_BACKEND_URL=https://your-backend.onrender.com in your host env
+const baseURL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : '/api';
 
 const api = axios.create({ baseURL });
 

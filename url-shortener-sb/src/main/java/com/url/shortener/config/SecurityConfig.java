@@ -29,13 +29,16 @@ import java.util.List;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-
-    private final JwtAuthenticationFilter jwtAuthFilter;
+    
+    private final com.url.shortener.security.JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
-    private final RateLimitingFilter rateLimitingFilter;
+    private final org.springframework.data.redis.core.RedisTemplate<String, String> redisTemplate;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // Manually instantiate filters to avoid auto-servlet registration issues in Spring Boot 3
+        JwtAuthenticationFilter jwtAuthFilter = new JwtAuthenticationFilter(jwtUtil, userDetailsService);
+        RateLimitingFilter rateLimitingFilter = new RateLimitingFilter(redisTemplate);
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
@@ -53,19 +56,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public org.springframework.boot.web.servlet.FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(JwtAuthenticationFilter filter) {
-        org.springframework.boot.web.servlet.FilterRegistrationBean<JwtAuthenticationFilter> registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(filter);
-        registration.setEnabled(false);
-        return registration;
-    }
-
-    @Bean
-    public org.springframework.boot.web.servlet.FilterRegistrationBean<RateLimitingFilter> rateLimitFilterRegistration(RateLimitingFilter filter) {
-        org.springframework.boot.web.servlet.FilterRegistrationBean<RateLimitingFilter> registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(filter);
-        registration.setEnabled(false);
-        return registration;
-    }
 
     @org.springframework.beans.factory.annotation.Value("#{'${cors.allowed-origins}'.split(',')}")
     private java.util.List<String> allowedOrigins;

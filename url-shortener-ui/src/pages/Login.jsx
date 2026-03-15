@@ -22,7 +22,10 @@ export default function Login() {
       addToast('Logged in successfully', 'success');
       navigate('/dashboard');
     } catch (err) {
-      addToast(err.response?.data?.message || 'Invalid credentials', 'error');
+      const msg = typeof err.response?.data === 'string' 
+        ? err.response.data 
+        : (err.response?.data?.message || 'Invalid credentials');
+      addToast(msg, 'error');
     } finally {
       setLoading(false);
     }

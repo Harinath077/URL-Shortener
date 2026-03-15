@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
-  BarChart2, Trash2, Copy, Check, Link2, Download,
-  MousePointerClick, Calendar as CalIcon, ArrowRight
+  BarChart2, Trash2, Copy, Check, Link2, ExternalLink,
+  MousePointerClick, Calendar as CalIcon, ArrowRight, LinkIcon,
+  ChevronDown
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Sidebar from '../components/Sidebar';
@@ -14,14 +15,19 @@ import api from '../api/axios';
 export default function Dashboard() {
   const { user } = useAuth();
   const [urls, setUrls] = useState([]);
+  
+  // Dev: Redirects happen on port 8080. Prod: redirects happen on brevly.io.
+  const redirectBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
   const [loading, setLoading] = useState(true);
   const [shrUrl, setShrUrl] = useState('');
   const [expiryDays, setExpiryDays] = useState('');
   const [shortening, setShortening] = useState(false);
   const [recentResult, setRecentResult] = useState(null);
+  const [copiedRecent, setCopiedRecent] = useState(false);
 
   const addToast = useToast();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   useEffect(() => { fetchUrls(); }, []);
 
@@ -65,9 +71,13 @@ export default function Dashboard() {
     }
   };
 
-  const copyToClipboard = (shortId) => {
-    const fullUrl = `${window.location.origin}/${shortId}`;
+  const copyToClipboard = (shortId, isRecent = false) => {
+    const fullUrl = `${redirectBase}/${shortId}`;
     navigator.clipboard.writeText(fullUrl);
+    if (isRecent) {
+      setCopiedRecent(true);
+      setTimeout(() => setCopiedRecent(false), 2000);
+    }
     addToast('Copied to clipboard', 'success');
   };
 
@@ -96,192 +106,203 @@ export default function Dashboard() {
       <div className="dashboard-main">
         
         <header className="dash-header">
-          <h1>URL SHORTENER</h1>
+          <div className="flex items-center gap-2">
+            <Link2 size={20} className="text-primary" />
+            <h1>
+              {pathname === '/dashboard/links' ? 'My Links' : 
+               pathname === '/dashboard/analytics' ? 'Analytics' : 'Dashboard'}
+            </h1>
+          </div>
           <div className="header-actions">
             <div className="header-profile">
               <div className="avatar-circle">{user?.username?.charAt(0).toUpperCase() || 'U'}</div>
-              {user?.username}
+              <span>{user?.username}</span>
             </div>
           </div>
         </header>
 
         <div className="dash-scroll">
-          <div className="dash-grid">
+          <div className="dash-content-stack">
             
-            {/* LEFT COLUMN: Performance & Engagement */}
-            <div className="main-col">
-              
-              <div className="card-clean" style={{ marginBottom: '32px' }}>
-                <div className="perf-controls">
-                  <span className="section-label" style={{ marginBottom: 0 }}>Performance</span>
-                  <div className="flex gap-4">
-                    <span className="flex items-center gap-2" style={{fontSize: '0.875rem', fontWeight: 500}}>
-                      <div style={{width:8,height:8,borderRadius:'50%',background:'var(--primary)'}}></div> Date created
-                    </span>
-                    <span className="flex items-center gap-2" style={{fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-muted)'}}>
-                      <div style={{width:8,height:8,borderRadius:'50%',border:'2px solid var(--text-muted)'}}></div> Top performing
-                    </span>
-                    <select className="perf-dropdown">
-                      <option>Yearly</option>
-                      <option>Monthly</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="metrics-flex">
-                  <div className="metric-box">
-                    <div className="metric-icon-wrap solid-blue"><BarChart2 size={24} /></div>
-                    <div className="metric-data">
-                      <div className="mlabel">Total Clicks</div>
-                      <div className="mvalue">{totalClicks.toLocaleString()}</div>
-                    </div>
-                  </div>
-                  <div className="metric-box">
-                    <div className="metric-icon-wrap solid-indigo"><MousePointerClick size={24} /></div>
-                    <div className="metric-data">
-                      <div className="mlabel">Active Links</div>
-                      <div className="mvalue">{urls.length}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chart — real per-link click counts */}
-                <div className="chart-container-inner">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={urls.map(u => ({ name: u.shortUrl, clicks: u.clickCount }))}
-                      margin={{ top: 10, right: 0, left: -25, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="colorC" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563EB" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#94A3B8'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#94A3B8'}} />
-                      <Tooltip contentStyle={{borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'}} />
-                      <Area type="stepBefore" dataKey="clicks" stroke="#2563EB" strokeWidth={2} fill="url(#colorC)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="flex justify-center">
-                  <button className="btn btn-primary btn-sm" style={{borderRadius: '4px'}}>Hide Chart ^</button>
+            {/* ZONE 1: Hero Shortener - only on main dashboard */}
+            {pathname === '/dashboard' && (
+              <div className="hero-card">
+              <div className="hero-header">
+                <div>
+                  <h2>Shorten a new link</h2>
+                  <p>Paste any long URL and get a short trackable link instantly</p>
                 </div>
               </div>
 
-              {/* Engagement All Time */}
-              <div className="link-list-header">
-                <span className="section-label" style={{ marginBottom: 0 }}>Engagement All Time</span>
-                <span style={{fontSize: '0.875rem', color: 'var(--text-muted)'}}>{urls.length} Result{urls.length !== 1 ? 's' : ''}</span>
-              </div>
-              
-              <div className="link-list">
-                {loading && <div style={{textAlign: 'center', color: 'var(--text-muted)', padding: '16px'}}>Loading links...</div>}
-                {!loading && sortedUrls.length === 0 && <div style={{textAlign: 'center', color: 'var(--text-muted)', padding: '16px'}}>No links created yet.</div>}
-                {sortedUrls.map(u => (
-                  <div key={u.shortUrl} className="link-item">
-                    <div className="link-meta">
-                      <div className="link-title">brevly.io/{u.shortUrl}</div>
-                      <div className="link-original">{u.originalUrl}</div>
-                      <div className="link-date">
-                        <CalIcon size={12} /> {new Date(u.createdDate).toLocaleString()}
-                        <span className="badge badge-gray" style={{marginLeft: '12px'}}>{u.clickCount} Clicks</span>
-                        {u.expired
-                          ? <span className="badge" style={{marginLeft: '8px', background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA'}}>Expired</span>
-                          : u.expiresAt
-                            ? <span className="badge" style={{marginLeft: '8px', background: '#ECFDF5', color: '#10B981', border: '1px solid #A7F3D0'}}>Active</span>
-                            : null
-                        }
-                      </div>
-                    </div>
-                      <div className="link-actions">
-                        <button className="flex items-center justify-center border border-slate-200" style={{background: 'var(--surface)', color: 'var(--text-muted)', borderRadius: '6px', width: 32, height: 32, border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s'}} onMouseEnter={(e) => {e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor='var(--primary)'}} onMouseLeave={(e) => {e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor='var(--border)'}} title="Copy" onClick={() => copyToClipboard(u.shortUrl)}>
-                          <Copy size={16} />
-                        </button>
-                        <button className="flex items-center justify-center border border-slate-200" style={{background: 'var(--surface)', color: 'var(--text-muted)', borderRadius: '6px', width: 32, height: 32, border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s', marginLeft: '8px'}} onMouseEnter={(e) => {e.currentTarget.style.background = '#F8FAFC';}} onMouseLeave={(e) => {e.currentTarget.style.background = 'var(--surface)';}} title="Analytics" onClick={() => navigate(`/dashboard/analytics/${u.shortUrl}`)}>
-                          <BarChart2 size={16} />
-                        </button>
-                        <button className="flex items-center justify-center border border-slate-200" style={{background: 'var(--surface)', color: 'var(--danger)', borderRadius: '6px', width: 32, height: 32, border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s', marginLeft: '8px'}} onMouseEnter={(e) => {e.currentTarget.style.background = '#FEF2F2';}} onMouseLeave={(e) => {e.currentTarget.style.background = 'var(--surface)';}} title="Delete" onClick={() => handleDelete(u.shortUrl)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                  </div>
-                ))}
-              </div>
-
-            </div>
-
-            {/* RIGHT COLUMN: Action Widgets */}
-            <div className="widget-stack">
-              
-              <div className="card-clean">
-                <span className="section-label">CREATE NEW LINK <Link2 size={14} style={{marginLeft: 4}} /></span>
-                <p style={{fontSize: '0.875rem', color: 'var(--text-muted)'}}>Create, short, and manage your links</p>
-                <form onSubmit={handleShorten} className="create-link-box">
+              <form onSubmit={handleShorten} className="unified-input-bar">
+                <div className="bar-input-group">
+                  <LinkIcon size={18} className="hero-input-icon" />
                   <input 
-                    className="input" 
-                    placeholder="https://very-long..." 
+                    className="bar-input" 
+                    placeholder="https://paste-your-long-url-here.com" 
                     value={shrUrl}
                     onChange={e => setShrUrl(e.target.value)}
                     required 
                   />
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                    <input
-                      className="input"
-                      type="number"
-                      min="1"
-                      max="365"
-                      placeholder="Expires in days (optional)"
-                      value={expiryDays}
-                      onChange={e => setExpiryDays(e.target.value)}
-                      style={{ fontSize: '0.8125rem' }}
-                    />
-                  </div>
-                  <button type="submit" className="btn btn-primary" disabled={shortening}>
-                    {shortening ? '...' : 'Create' } <ArrowRight size={16} />
-                  </button>
-                </form>
-              </div>
-
-              <div className="card-clean">
-                <span className="section-label">CUSTOM YOUR LINK</span>
-                <div className="preview-box">
-                  <div style={{height: 120, background: '#F1F5F9', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                    <MousePointerClick size={24} className="text-muted" />
-                  </div>
                 </div>
-                {recentResult && (
-                  <div className="preview-url">
-                    <Link2 size={14} className="text-primary" /> brevly.io/{recentResult.shortUrl}
-                  </div>
-                )}
-              </div>
+                
+                <div className="bar-divider"></div>
+
+                <div className="bar-select-wrapper">
+                  <select 
+                    className="bar-select"
+                    value={expiryDays}
+                    onChange={e => setExpiryDays(e.target.value)}
+                  >
+                    <option value="">Never Expires</option>
+                    <option value="1">Expire in 1 Day</option>
+                    <option value="7">Expire in 7 Days</option>
+                    <option value="30">Expire in 30 Days</option>
+                  </select>
+                  <ChevronDown size={14} className="bar-select-icon" />
+                </div>
+
+                <button type="submit" className="bar-button" disabled={shortening}>
+                  {shortening ? 'Creating...' : 'Create Link' } <ArrowRight size={16} />
+                </button>
+              </form>
 
               {recentResult && (
-                <div className="card-clean">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="section-label" style={{marginBottom: 0}}>QR CODE</span>
-                    <button className="btn btn-primary btn-sm" style={{borderRadius: 4}}>Download PNG</button>
+                <div className="hero-result-card">
+                  <div className="flex items-center gap-4">
+                    <div className="qr-mini-card">
+                      <QRCodeSVG value={`${redirectBase}/${recentResult.shortUrl}`} size={48} level="M" />
+                    </div>
+                    <div className="result-url-display">
+                      <div className="result-short">{redirectBase.replace('http://','').replace('https://','')}/{recentResult.shortUrl}</div>
+                      <div className="result-original">{recentResult.originalUrl}</div>
+                    </div>
                   </div>
-                  <div className="qr-widget">
-                    <div className="qr-code-box">
-                      <QRCodeSVG value={`${window.location.origin}/${recentResult.shortUrl}`} size={80} level="M" />
-                    </div>
-                    <div className="qr-meta">
-                      <div className="qr-url-text flex items-center gap-1">
-                        <Link2 size={14} className="text-primary" /> https://{window.location.host}/{recentResult.shortUrl}
-                      </div>
-                      <div className="qr-date">
-                        <CalIcon size={14} /> {new Date(recentResult.createdDate).toLocaleDateString()}
-                      </div>
-                    </div>
+                  
+                  <div className="result-actions">
+                    <button 
+                      className="btn btn-primary" 
+                      style={{ height: 40, borderRadius: 8 }}
+                      onClick={() => copyToClipboard(recentResult.shortUrl, true)}
+                    >
+                      {copiedRecent ? <Check size={16} /> : <Copy size={16} />}
+                      {copiedRecent ? 'Copied' : 'Copy Link'}
+                    </button>
+                    <a 
+                      href={`${redirectBase}/${recentResult.shortUrl}`} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="btn btn-outline"
+                      style={{ height: 40, borderRadius: 8 }}
+                    >
+                      <ExternalLink size={16} /> Visit
+                    </a>
                   </div>
                 </div>
               )}
-
             </div>
+            )}
+
+            {/* ZONE 2: Metric Cards Row - hidden on analytics picker */}
+            {pathname !== '/dashboard/analytics' && (
+              <div className="metric-row">
+              <div className="metric-compact-card">
+                <div className="metric-label-group">
+                  <span className="metric-compact-label">Total Links</span>
+                  <span className="metric-compact-value">{urls.length}</span>
+                </div>
+                <Link2 size={24} className="text-light" style={{opacity: 0.5}} />
+              </div>
+              <div className="metric-compact-card">
+                <div className="metric-label-group">
+                  <span className="metric-compact-label">Total Clicks</span>
+                  <span className="metric-compact-value">{totalClicks.toLocaleString()}</span>
+                </div>
+                <BarChart2 size={24} className="text-light" style={{opacity: 0.5}} />
+              </div>
+              <div className="metric-compact-card">
+                <div className="metric-label-group">
+                  <span className="metric-compact-label">Active Links</span>
+                  <span className="metric-compact-value">
+                    {urls.filter(u => !u.expired).length}
+                  </span>
+                </div>
+                <MousePointerClick size={24} className="text-light" style={{opacity: 0.5}} />
+              </div>
+            </div>
+            )}
+
+            {/* ZONE 3: Links Table */}
+            <div className="links-section">
+              <div className="links-header">
+                <h3>
+                  {pathname === '/dashboard/analytics' ? 'Select a link to view analytics' : 'Your links'}
+                </h3>
+                <span style={{fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500}}>
+                  {urls.length} result{urls.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="links-table-wrapper">
+                <table className="links-table">
+                  <thead>
+                    <tr>
+                      <th>Short URL</th>
+                      <th>Original URL</th>
+                      <th>Clicks</th>
+                      <th>Created</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading && <tr><td colSpan="6" style={{textAlign: 'center', padding: '40px'}}>Loading links...</td></tr>}
+                    {!loading && urls.length === 0 && <tr><td colSpan="6" style={{textAlign: 'center', padding: '40px'}}>No links created yet.</td></tr>}
+                    {sortedUrls.map(u => (
+                      <tr key={u.shortUrl}>
+                        <td>
+                          <div className="table-short-link">
+                            {redirectBase.replace('http://','').replace('https://','')}/{u.shortUrl}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="table-original-url" title={u.originalUrl}>
+                            {u.originalUrl}
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{fontWeight: 600}}>{u.clickCount}</span>
+                        </td>
+                        <td>
+                          <span style={{color: 'var(--text-muted)'}}>{new Date(u.createdDate).toLocaleDateString()}</span>
+                        </td>
+                        <td>
+                          {u.expired ? (
+                            <span className="badge" style={{background: '#FEF2F2', color: '#EF4444'}}>Expired</span>
+                          ) : (
+                            <span className="badge badge-green">Active</span>
+                          )}
+                        </td>
+                        <td>
+                          <div className="table-actions">
+                            <button className="action-icon-btn" title="Copy" onClick={() => copyToClipboard(u.shortUrl)}>
+                              <Copy size={16} />
+                            </button>
+                            <button className="action-icon-btn" title="Analytics" onClick={() => navigate(`/dashboard/analytics/${u.shortUrl}`)}>
+                              <BarChart2 size={16} />
+                            </button>
+                            <button className="action-icon-btn delete" title="Delete" onClick={() => handleDelete(u.shortUrl)}>
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { ArrowLeft, ExternalLink, Calendar, MousePointerClick, Clock, Trash2, Copy } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Calendar, MousePointerClick, Clock, Trash2, Copy, TrendingUp, BarChart2 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import { useToast } from '../components/Toast';
@@ -14,6 +14,8 @@ export default function Analytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(7);
+
+  const redirectBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
   useEffect(() => {
     fetchStats();
@@ -33,7 +35,7 @@ export default function Analytics() {
   };
 
   const copyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/${code}`);
+    navigator.clipboard.writeText(`${redirectBase}/${code}`);
     addToast('Short link copied!', 'success');
   };
 
@@ -48,12 +50,14 @@ export default function Analytics() {
     }
   };
 
-  // Real daily stats from backend — gap-filled so every day has an entry
   const chartData = (data?.dailyClicks || []).map(d => ({
     name: new Date(d.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
     clicks: d.clickCount,
   }));
 
+  const totalClicksStored = data?.clickCount || 0;
+  const daysActive = Math.max(1, Math.floor((new Date() - new Date(data?.createdDate)) / (1000 * 60 * 60 * 24)));
+  const avgClicks = (totalClicksStored / daysActive).toFixed(1);
   const peakDay = chartData.reduce((max, d) => d.clicks > (max?.clicks ?? -1) ? d : max, null);
 
   if (loading) {
@@ -69,137 +73,154 @@ export default function Analytics() {
     <div className="dashboard-shell">
       <Sidebar />
       <div className="dashboard-main">
-        <div className="dashboard-content analytics-page">
+        <div className="dash-scroll">
+          <div className="analytics-container">
           
-          <div className="back-link" onClick={() => navigate('/dashboard')}>
+          <div className="analytics-back" onClick={() => navigate('/dashboard')}>
             <ArrowLeft size={16} /> Back to Dashboard
           </div>
 
-          <div className="analytics-header">
+          <div className="analytics-title-row">
             <h1>Analytics for /{code}</h1>
-            <p>Click data powered by Spring Boot background sync + Redis Fast-Path</p>
+            <p>Click data · last updated live</p>
           </div>
 
-          <div className="analytics-metrics">
-            <div className="metric-card">
-              <div className="metric-icon blue"><MousePointerClick size={22} /></div>
-              <div><div className="value">{data?.clickCount || 0}</div><div className="label">Total Clicks</div></div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-icon purple"><Clock size={22} /></div>
-              <div>
-                <div className="value">
-                  {Math.max(1, Math.floor((new Date() - new Date(data?.createdDate)) / (1000 * 60 * 60 * 24)))}
-                </div>
-                <div className="label">Days Active</div>
+          {/* Metric Cards Row */}
+          <div className="analytics-metrics-row">
+            <div className="analytics-metric-card">
+              <div className="metric-icon-circle blue"><BarChart2 size={22} /></div>
+              <div className="metric-info">
+                <span className="metric-val">{totalClicksStored.toLocaleString()}</span>
+                <span className="metric-lab">Total clicks</span>
               </div>
             </div>
-            <div className="metric-card">
-              <div className="metric-icon green"><Calendar size={22} /></div>
-              <div>
-                <div className="value">
-                  {data?.createdDate ? new Date(data.createdDate).toLocaleDateString() : 'N/A'}
-                </div>
-                <div className="label">Created Date</div>
+            <div className="analytics-metric-card">
+              <div className="metric-icon-circle purple"><Clock size={22} /></div>
+              <div className="metric-info">
+                <span className="metric-val">{daysActive}</span>
+                <span className="metric-lab">Days active</span>
+              </div>
+            </div>
+            <div className="analytics-metric-card">
+              <div className="metric-icon-circle green"><TrendingUp size={22} /></div>
+              <div className="metric-info">
+                <span className="metric-val">{avgClicks}</span>
+                <span className="metric-lab">Avg clicks / day</span>
               </div>
             </div>
           </div>
 
-          <div className="info-table-card">
-            <table>
-              <thead>
-                <tr>
-                  <th>Info</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="font-bold text-sm">Short URL</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                       <span className="badge badge-blue">
-                         {window.location.host}/{data?.shortUrl}
-                       </span>
-                       <button className="icon-btn" onClick={copyLink}><Copy size={14}/></button>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="font-bold text-sm">Original Destination</td>
-                  <td>
-                    <a href={data?.originalUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
-                      {data?.originalUrl} <ExternalLink size={14} />
-                    </a>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="font-bold text-sm">Status</td>
-                  <td><span className="badge badge-green">Active — Cached</span></td>
-                </tr>
-              </tbody>
-            </table>
+          {/* URL Info Card */}
+          <div className="analytics-info-card">
+            <div className="info-row">
+              <span className="info-key">Short URL</span>
+              <div className="flex items-center gap-2">
+                <span className="info-short">{redirectBase.replace('http://','').replace('https://','')}/{data?.shortUrl}</span>
+                <button className="action-icon-btn" onClick={copyLink}><Copy size={14}/></button>
+              </div>
+            </div>
+            <div className="info-row">
+              <span className="info-key">Original URL</span>
+              <div className="info-val info-original" title={data?.originalUrl}>
+                {data?.originalUrl}
+              </div>
+            </div>
+            <div className="info-row">
+              <span className="info-key">Created</span>
+              <span className="info-val">
+                {data?.createdDate ? new Date(data.createdDate).toLocaleDateString() : 'N/A'}
+              </span>
+            </div>
+            <div className="info-row">
+              <span className="info-key">Status</span>
+              <span className={`badge ${data?.expired ? 'badge-danger' : 'badge-green'}`}>
+                {data?.expired ? 'Expired' : 'Active'}
+              </span>
+            </div>
           </div>
 
-            <div className="chart-card">
-            <div className="chart-header">
-                <h3>Engagement Metrics ({days} Days)</h3>
-                {/* 7 / 30 day toggle */}
-                <div className="chart-tabs">
-                  {[7, 30].map(d => (
-                    <button
-                      key={d}
-                      className={`chart-tab${days === d ? ' active' : ''}`}
-                      onClick={() => setDays(d)}
-                    >
-                      {d} Days
-                    </button>
-                  ))}
-                </div>
+          {/* Chart Card */}
+          <div className="analytics-chart-card">
+            <div className="chart-header-row">
+              <h3>Daily clicks</h3>
+              <div className="toggle-pill-group">
+                <button 
+                  className={`toggle-btn ${days === 7 ? 'active' : ''}`} 
+                  onClick={() => setDays(7)}
+                >7 Days</button>
+                <button 
+                  className={`toggle-btn ${days === 30 ? 'active' : ''}`} 
+                  onClick={() => setDays(30)}
+                >30 Days</button>
               </div>
-            <div className="chart-meta">
-                <div className="chart-metric">
-                  <div className="dot" style={{background: 'var(--primary)'}}></div>
-                  <span>Avg Daily: <strong>{chartData.length ? Math.round(chartData.reduce((s,d) => s + d.clicks, 0) / chartData.length) : 0}</strong></span>
-                </div>
-                <div className="chart-metric">
-                  <div className="dot" style={{background: 'var(--success)'}}></div>
-                  <span>Peak: <strong>{peakDay?.clicks ? `${peakDay.name} (${peakDay.clicks})` : 'N/A'}</strong></span>
-                </div>
+            </div>
+
+            <div className="chart-stats-row">
+              <div className="chart-stat-item">
+                <div className="dot-indicator" style={{background: '#2563EB'}}></div>
+                <span>Avg daily: <strong>{data?.dailyClicks?.length ? (data.dailyClicks.reduce((s,d) => s+d.clickCount,0)/data.dailyClicks.length).toFixed(1) : 0}</strong></span>
               </div>
-            <div style={{ height: 300, width: '100%', marginTop: '30px' }}>
+              <div className="chart-stat-item">
+                <div className="dot-indicator" style={{background: '#10B981'}}></div>
+                <span>Peak: <strong>{peakDay?.clicks ? `${peakDay.name} (${peakDay.clicks})` : 'N/A'}</strong></span>
+              </div>
+            </div>
+
+            <div style={{ height: 280, width: '100%', marginTop: '30px' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                     <defs>
-                      <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
+                      <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2563EB" stopOpacity={0.15}/>
+                        <stop offset="100%" stopColor="#2563EB" stopOpacity={0.01}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748B'}} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748B'}} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}}
-                      itemStyle={{ color: '#2563EB', fontWeight: 600 }}
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fontSize: 12, fill: '#94A3B8'}} 
+                      dy={12}
+                      interval="preserveStartEnd"
                     />
-                    <Area type="monotone" dataKey="clicks" stroke="#2563EB" strokeWidth={3} fillOpacity={1} fill="url(#colorClicks)" />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fontSize: 12, fill: '#94A3B8'}} 
+                      allowDecimals={false}
+                      width={30}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '13px'}}
+                      cursor={{ stroke: '#E2E8F0', strokeWidth: 1 }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="clicks" 
+                      stroke="#2563EB" 
+                      strokeWidth={2.5} 
+                      fill="url(#areaGradient)"
+                      dot={false}
+                      activeDot={{ r: 5, fill: '#2563EB', stroke: '#fff', strokeWidth: 2 }}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+          </div>
 
-          <div className="analytics-bottom-actions">
-            <button className="btn btn-danger" onClick={handleDelete}>
-              <Trash2 size={16} /> Delete URL
+          <div className="analytics-actions">
+            <button className="btn-outline-danger" onClick={handleDelete}>
+              <Trash2 size={16} /> Delete this URL
             </button>
             <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
-              Done
+              Shorten another
             </button>
           </div>
 
         </div>
       </div>
+    </div>
     </div>
   );
 }

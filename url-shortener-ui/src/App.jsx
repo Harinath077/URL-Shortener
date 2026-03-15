@@ -27,10 +27,13 @@ function App() {
               path="/dashboard"
               element={<AuthGuard><Dashboard /></AuthGuard>}
             />
-            {/* Alias /dashboard/links to dashboard */}
             <Route
               path="/dashboard/links"
-              element={<Navigate to="/dashboard" replace />}
+              element={<AuthGuard><Dashboard /></AuthGuard>}
+            />
+            <Route
+              path="/dashboard/analytics"
+              element={<AuthGuard><Dashboard /></AuthGuard>}
             />
             <Route
               path="/dashboard/analytics/:code"
