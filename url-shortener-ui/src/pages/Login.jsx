@@ -32,7 +32,7 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card">
         <Link to="/" className="auth-logo">
-          <Link2 size={18} /> short.ly
+          <Link2 size={18} /> brevly.io
         </Link>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>Welcome back</h2>

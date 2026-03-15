@@ -10,7 +10,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <Link to="/" className="sidebar-logo">
         <LinkIcon size={22} />
-        short.ly
+        brevly.io
       </Link>
 
       <div className="sidebar-nav">

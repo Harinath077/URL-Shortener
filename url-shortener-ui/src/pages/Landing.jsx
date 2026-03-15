@@ -97,7 +97,7 @@ export default function Landing() {
                 <div style={{width: 10, height: 10, borderRadius: '50%', background: '#10B981'}}></div>
               </div>
               <div style={{flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 12px', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'center'}}>
-                <Link2 size={12} style={{marginRight: 6}}/> short.ly/aZ91K
+                <Link2 size={12} style={{marginRight: 6}}/> brevly.io/aZ91K
               </div>
             </div>
             <div style={{padding: '24px'}}>

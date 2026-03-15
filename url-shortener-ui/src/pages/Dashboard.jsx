@@ -183,7 +183,7 @@ export default function Dashboard() {
                 {sortedUrls.map(u => (
                   <div key={u.shortUrl} className="link-item">
                     <div className="link-meta">
-                      <div className="link-title">short.ly/{u.shortUrl}</div>
+                      <div className="link-title">brevly.io/{u.shortUrl}</div>
                       <div className="link-original">{u.originalUrl}</div>
                       <div className="link-date">
                         <CalIcon size={12} /> {new Date(u.createdDate).toLocaleString()}
@@ -254,7 +254,7 @@ export default function Dashboard() {
                 </div>
                 {recentResult && (
                   <div className="preview-url">
-                    <Link2 size={14} className="text-primary" /> short.ly/{recentResult.shortUrl}
+                    <Link2 size={14} className="text-primary" /> brevly.io/{recentResult.shortUrl}
                   </div>
                 )}
               </div>

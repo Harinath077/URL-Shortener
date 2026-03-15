@@ -25,7 +25,7 @@ export default function Navbar() {
         
         <Link to="/" style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)', letterSpacing: '-0.02em', flexShrink: 0 }}>
           <Link2 size={24} style={{ color: 'var(--primary)' }} />
-          short.ly
+          brevly.io
         </Link>
 
         {/* Desktop Links */}
