@@ -32,8 +32,8 @@ public class UrlShorteningService {
 
         UrlMapping saved = urlMappingRepository.save(mapping);
 
-        // Encode the DB-generated ID to a compact base62 short code
-        saved.setShortUrl(base62Encoder.encode(saved.getId()));
+        // Encode the DB-generated ID with a 1B offset to ensure 6-char alphanumeric codes
+        saved.setShortUrl(base62Encoder.encode(saved.getId() + 1_000_000_000L));
         return urlMappingRepository.save(saved);
     }
 
