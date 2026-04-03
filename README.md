@@ -7,22 +7,44 @@ A production-ready full-stack URL shortener built with **React (Vite)**, **Sprin
 When a user visits a short URL, the request is instantly handled by a multi-layer cache and persistent storage routing system:
 
 ```mermaid
-flowchart LR
-    Req(["🌐 Request"]) --> RC["⚙️ RedirectController"]
+---
+config:
+  theme: redux-dark
+title: "URL Shortener — System Architecture"
+---
+flowchart TD
+    Client["🌐 Client (Browser / React UI)"]
     
-    RC -->|"1️⃣ Check"| Redis[("⚡ Redis (Cache)")]
-    RC -->|"2️⃣ Fallback (On Miss)"| DB[("🐘 PostgreSQL")]
-    
-    RC -.->|"3️⃣ Async"| Log["📊 Log Click"]
-    
-    RC -->|"4️⃣ Return"| Redir(["↪️ 302 Redirect"])
-    
-    style Req fill:#f8f9fa,stroke:#ced4da,stroke-width:2px,color:#000000
-    style Redir fill:#f8f9fa,stroke:#ced4da,stroke-width:2px,color:#000000
-    style RC fill:#e3f2fd,stroke:#90caf9,stroke-width:2px,color:#000000
-    style Redis fill:#ffebee,stroke:#ef9a9a,stroke-width:2px,color:#000000
-    style DB fill:#e8f5e9,stroke:#a5d6a7,stroke-width:2px,color:#000000
-    style Log fill:#fff3e0,stroke:#ffcc80,stroke-width:2px,color:#000000
+    subgraph Backend ["⚙️ Spring Boot Backend"]
+        Auth["Auth Service
+        JWT + BCrypt"]
+        Shorten["URL Shortener
+        Base62 Encoding"]
+        Redirect["Redirect Service"]
+        Analytics["Analytics Service
+        Click Tracking"]
+    end
+
+    Redis[("⚡ Redis Cache")]
+    PG[("🗄️ PostgreSQL")]
+
+    Client -->|"Register / Login"| Auth
+    Client -->|"POST /api/shorten"| Shorten
+    Client -->|"GET /{shortCode}"| Redirect
+    Shorten --> PG
+    Redirect -->|"Cache HIT"| Redis
+    Redirect -->|"Cache MISS"| PG
+    Redirect -->|"Log Click"| Analytics
+    Analytics --> PG
+    Redirect -->|"302 Redirect"| Client
+
+    style Client fill:#1e3a5f,stroke:#4a90d9,color:#ffffff
+    style Auth fill:#1a4a7a,stroke:#4a90d9,color:#ffffff
+    style Shorten fill:#1a4a7a,stroke:#4a90d9,color:#ffffff
+    style Redirect fill:#1a4a7a,stroke:#4a90d9,color:#ffffff
+    style Analytics fill:#1a4a7a,stroke:#4a90d9,color:#ffffff
+    style Redis fill:#c0392b,stroke:#e74c3c,color:#ffffff
+    style PG fill:#1e6b3a,stroke:#27ae60,color:#ffffff
 ```
 
 ### 🧠 The Math Behind the Magic: Base62 Encoding
