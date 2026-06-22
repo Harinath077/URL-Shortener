@@ -12,10 +12,12 @@ import com.url.shortener.repository.UrlMappingRepository;
 import com.url.shortener.repository.UserRepository;
 import com.url.shortener.service.AnalyticsService;
 import com.url.shortener.service.UrlShorteningService;
+import com.url.shortener.exception.ForbiddenOperationException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 
 import java.security.Principal;
 import java.time.LocalDateTime;
@@ -30,6 +32,21 @@ public class UrlController {
     private final UrlMappingRepository urlMappingRepository;
     private final UserRepository       userRepository;
     private final AnalyticsService     analyticsService;
+
+    private void verifyOwnership(
+            UrlMapping mapping,
+            Principal principal) {
+
+        if (principal == null
+                || mapping.getUser() == null
+                || !mapping.getUser().getUsername()
+                .equals(principal.getName())) {
+
+            throw new ForbiddenOperationException(
+                    "You do not have permission to access this URL"
+            );
+        }
+    }
 
     // ── POST /api/shorten ───────────────────────────────────────────────────────
     @PostMapping("/shorten")
@@ -79,14 +96,14 @@ public class UrlController {
     // ── DELETE /api/urls/{shortCode} ────────────────────────────────────────────
     @DeleteMapping("/urls/{shortCode}")
     public ResponseEntity<Void> deleteUrl(@PathVariable String shortCode, Principal principal) {
+
         UrlMapping mapping = urlMappingRepository.findByShortUrl(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
 
         // Only the owner may delete their own link
-        if (principal != null && mapping.getUser() != null
-                && mapping.getUser().getUsername().equals(principal.getName())) {
-            urlMappingRepository.delete(mapping);
-        }
+        verifyOwnership(mapping, principal);
+        urlMappingRepository.delete(mapping);
+
         return ResponseEntity.noContent().build();
     }
 
@@ -94,11 +111,13 @@ public class UrlController {
     @GetMapping("/analytics/{shortCode}")
     public ResponseEntity<AnalyticsResponse> getAnalytics(
             @PathVariable String shortCode,
-            @RequestParam(defaultValue = "7") int days) {
+            @RequestParam(defaultValue = "7") int days,
+            Principal principal) {
 
         UrlMapping mapping = urlMappingRepository.findByShortUrl(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
 
+        verifyOwnership(mapping, principal);
         List<DailyClickDto> dailyClicks = analyticsService.getDailyStats(shortCode, days);
 
         return ResponseEntity.ok(new AnalyticsResponse(
