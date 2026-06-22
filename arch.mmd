@@ -1,0 +1,16 @@
+flowchart LR
+    Req(["🌐 Request"]) --> RC["⚙️ RedirectController"]
+    
+    RC -->|"1️⃣ Check"| Redis[("⚡ Redis (Cache)")]
+    RC -->|"2️⃣ Fallback (On Miss)"| DB[("🐘 PostgreSQL")]
+    
+    RC -.->|"3️⃣ Async"| Log["📊 Log Click"]
+    
+    RC -->|"4️⃣ Return"| Redir(["↪️ 302 Redirect"])
+    
+    style Req fill:#f8f9fa,stroke:#ced4da,stroke-width:2px,color:#000000
+    style Redir fill:#f8f9fa,stroke:#ced4da,stroke-width:2px,color:#000000
+    style RC fill:#e3f2fd,stroke:#90caf9,stroke-width:2px,color:#000000
+    style Redis fill:#ffebee,stroke:#ef9a9a,stroke-width:2px,color:#000000
+    style DB fill:#e8f5e9,stroke:#a5d6a7,stroke-width:2px,color:#000000
+    style Log fill:#fff3e0,stroke:#ffcc80,stroke-width:2px,color:#000000
