@@ -13,10 +13,15 @@ public class UrlMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @jakarta.persistence.Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String originalUrl;
+
+    @Column(nullable = false, unique = true)
     private String shortUrl;
+
     private int clickCount = 0;
+
+    @Column(nullable = false)
     private LocalDateTime createdDate;
     private LocalDateTime expiresAt;
 

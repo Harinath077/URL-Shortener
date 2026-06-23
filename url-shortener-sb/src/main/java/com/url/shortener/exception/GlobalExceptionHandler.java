@@ -1,5 +1,6 @@
 package com.url.shortener.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -26,12 +28,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ForbiddenOperationException.class)
     public ResponseEntity<Map<String, String>> handleForbidden(
-            ForbiddenOperationException ex){
+            ForbiddenOperationException ex) {
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("error", ex.getMessage()));
     }
-
 
     // Handles @Valid failures — returns 400 with field-level error messages
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -41,20 +42,18 @@ public class GlobalExceptionHandler {
                 .stream()
                 .collect(Collectors.toMap(
                         f -> f.getField(),
-                        f -> f.getDefaultMessage()
-                ));
+                        f -> f.getDefaultMessage(),
+                        (firstMessage, ignoredMessage) -> firstMessage));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
-        ex.printStackTrace();
-        java.io.StringWriter sw = new java.io.StringWriter();
-        ex.printStackTrace(new java.io.PrintWriter(sw));
+        // Log the full exception on the server side
+        log.error("Unhandled exception occurred: ", ex);
+
+        // Return a generic, safe error message to the client
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                    "error", ex.getMessage() != null ? ex.getMessage() : "Unknown Error",
-                    "trace", sw.toString()
-                ));
+                .body(Map.of("error", "An unexpected error occurred. Please try again later."));
     }
 }
