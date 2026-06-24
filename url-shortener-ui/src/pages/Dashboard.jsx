@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
@@ -29,21 +29,21 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  useEffect(() => { fetchUrls(); }, []);
-
-  const fetchUrls = async () => {
+  const fetchUrls = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get('/urls');
       setUrls(res.data || []);
       // Backend already returns newest-first — use index 0
       if (res.data?.length > 0) setRecentResult(res.data[0]);
-    } catch (err) {
+    } catch {
       addToast('Failed to load your URLs', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]);
+
+  useEffect(() => { fetchUrls(); }, [fetchUrls]);
 
   const handleShorten = async (e) => {
     e.preventDefault();
@@ -88,7 +88,7 @@ export default function Dashboard() {
       setUrls(prev => prev.filter(u => u.shortUrl !== code));
       if (recentResult?.shortUrl === code) setRecentResult(null);
       addToast('Link deleted', 'success');
-    } catch (err) {
+    } catch {
       addToast('Failed to delete', 'error');
     }
   };

@@ -7,6 +7,7 @@ import com.url.shortener.models.User;
 import com.url.shortener.repository.UserRepository;
 import com.url.shortener.security.CustomUserDetailsService;
 import com.url.shortener.security.JwtUtil;
+import com.url.shortener.service.RefreshTokenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -16,10 +17,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 
@@ -33,6 +31,7 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
@@ -60,26 +59,87 @@ public class AuthController {
         final UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
         final String jwt = jwtUtil.generateToken(userDetails);
 
-        // Store JWT in an HttpOnly, Secure, SameSite=Strict cookie
-        // so JavaScript cannot read it (XSS-safe)
-        ResponseCookie cookie = ResponseCookie.from("jwt", jwt)
-                .httpOnly(true)           // JS cannot access this cookie
-                .secure(true)             // Only transmitted over HTTPS
-                .sameSite("Strict")       // Not sent on cross-site requests (CSRF protection)
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String refreshToken = refreshTokenService.createRefreshToken(user);
+
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", jwt)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
                 .path("/")
-                .maxAge(Duration.ofHours(10))
+                .maxAge(Duration.ofMinutes(15))
                 .build();
 
-        // Token is NOT returned in the body — only set as a cookie
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/auth")
+                .maxAge(Duration.ofDays(7))
+                .build();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+        headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .headers(headers)
                 .body(new AuthResponse(null, request.getUsername()));
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@CookieValue(name = "refresh_token", required = false) String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity.status(401).body("Refresh token is missing");
+        }
+
+        try {
+            RefreshTokenService.RotationResult result = refreshTokenService.rotateToken(refreshToken);
+
+            final UserDetails userDetails = userDetailsService.loadUserByUsername(result.user().getUsername());
+            final String newJwt = jwtUtil.generateToken(userDetails);
+
+            ResponseCookie jwtCookie = ResponseCookie.from("jwt", newJwt)
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("Strict")
+                    .path("/")
+                    .maxAge(Duration.ofMinutes(15))
+                    .build();
+
+            ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", result.newRawToken())
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("Strict")
+                    .path("/api/auth")
+                    .maxAge(Duration.ofDays(7))
+                    .build();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+            headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(new AuthResponse(null, result.user().getUsername()));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        }
+    }
+
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        // Overwrite the cookie with an empty value and maxAge=0 to delete it from the browser
-        ResponseCookie deleteCookie = ResponseCookie.from("jwt", "")
+    public ResponseEntity<Void> logout(@CookieValue(name = "refresh_token", required = false) String refreshToken) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            try {
+                refreshTokenService.revokeToken(refreshToken);
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+
+        ResponseCookie deleteJwtCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("Strict")
@@ -87,8 +147,20 @@ public class AuthController {
                 .maxAge(0)
                 .build();
 
+        ResponseCookie deleteRefreshCookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/auth")
+                .maxAge(0)
+                .build();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.SET_COOKIE, deleteJwtCookie.toString());
+        headers.add(HttpHeaders.SET_COOKIE, deleteRefreshCookie.toString());
+
         return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .headers(headers)
                 .build();
     }
 }
