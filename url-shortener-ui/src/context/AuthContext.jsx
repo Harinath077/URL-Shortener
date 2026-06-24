@@ -4,6 +4,9 @@ import api from '../api/axios';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  // JWT is in an HttpOnly cookie — the frontend never reads it.
+  // Only the username is kept in localStorage to persist the "logged in" UI state
+  // across page refreshes without an extra round-trip to the backend.
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user_info')) || null; }
     catch { return null; }
@@ -11,9 +14,8 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     const res = await api.post('/auth/login', { username, password });
-    const { token } = res.data;
-    localStorage.setItem('jwt_token', token);
-    // Use the username param directly — guaranteed non-null even if backend shape changes
+    // The server sets the HttpOnly jwt cookie in the Set-Cookie header.
+    // We only store the username locally so the UI knows who is logged in.
     const userObj = { username };
     localStorage.setItem('user_info', JSON.stringify(userObj));
     setUser(userObj);
@@ -25,8 +27,14 @@ export function AuthProvider({ children }) {
     return res.data;
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('jwt_token');
+  const logout = useCallback(async () => {
+    try {
+      // Tell the backend to clear the HttpOnly jwt cookie.
+      // The browser cannot delete an HttpOnly cookie itself.
+      await api.post('/auth/logout');
+    } catch {
+      // Ignore errors — still clear local state so the UI transitions to logged-out.
+    }
     localStorage.removeItem('user_info');
     setUser(null);
   }, []);
@@ -39,3 +47,4 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+
