@@ -1,8 +1,9 @@
 package com.url.shortener.service;
 
+import com.url.shortener.dto.CachedUrlData;
+import com.url.shortener.exception.UrlExpiredException;
 import com.url.shortener.exception.UrlNotFoundException;
 import com.url.shortener.models.UrlMapping;
-import com.url.shortener.repository.UrlMappingRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,16 +11,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UrlRedirectionServiceTest {
 
     @Mock
-    private UrlMappingRepository urlMappingRepository;
+    private UrlCacheService urlCacheService;
 
     @Mock
     private AnalyticsService analyticsService;
@@ -27,71 +29,79 @@ class UrlRedirectionServiceTest {
     @InjectMocks
     private UrlRedirectionService urlRedirectionService;
 
-    // ── fetchOriginalUrl (cached method) ─────────────────────────
+    // ── getOriginalUrl ────────────────────────────────────────────
 
     @Test
-    @DisplayName("fetchOriginalUrl: cache miss → hits DB and returns URL")
-    void fetchOriginalUrl_cacheMiss_returnsUrl() {
-        UrlMapping mapping = new UrlMapping();
-        mapping.setShortUrl("1");
-        mapping.setOriginalUrl("https://www.google.com");
+    @DisplayName("getOriginalUrl: returns the correct original URL")
+    void getOriginalUrl_returnsOriginalUrl() {
+        CachedUrlData cached = new CachedUrlData(
+                1L,
+                "https://google.com",
+                null
+        );
 
-        when(urlMappingRepository.findByShortUrl("1")).thenReturn(Optional.of(mapping));
+        when(urlCacheService.fetchCachedData("abc")).thenReturn(cached);
 
-        String result = urlRedirectionService.fetchOriginalUrl("1");
+        String result = urlRedirectionService.getOriginalUrl("abc");
 
-        assertEquals("https://www.google.com", result);
-        verify(urlMappingRepository).findByShortUrl("1");
+        assertEquals("https://google.com", result);
     }
 
     @Test
-    @DisplayName("fetchOriginalUrl: short code not found → throws UrlNotFoundException")
-    void fetchOriginalUrl_notFound_throwsUrlNotFoundException() {
-        when(urlMappingRepository.findByShortUrl("xyz")).thenReturn(Optional.empty());
+    @DisplayName("getOriginalUrl: expired URL → throws UrlExpiredException and evicts cache")
+    void getOriginalUrl_expiredUrl_throwsUrlExpiredException() {
+        CachedUrlData cached = new CachedUrlData(
+                1L,
+                "https://google.com",
+                LocalDateTime.now().minusDays(1)
+        );
 
-        assertThrows(UrlNotFoundException.class,
-                () -> urlRedirectionService.fetchOriginalUrl("xyz"));
-    }
+        when(urlCacheService.fetchCachedData("abc")).thenReturn(cached);
 
-    // ── getOriginalUrl (public method, always calls analytics) ───
+        assertThrows(UrlExpiredException.class,
+                () -> urlRedirectionService.getOriginalUrl("abc"));
 
-    @Test
-    @DisplayName("getOriginalUrl: calls analytics on every redirect")
-    void getOriginalUrl_alwaysCallsAnalytics() {
-        UrlMapping mapping = new UrlMapping();
-        mapping.setShortUrl("1");
-        mapping.setOriginalUrl("https://www.google.com");
-        mapping.setClickCount(0);
-
-        when(urlMappingRepository.findByShortUrl("1")).thenReturn(Optional.of(mapping));
-        doNothing().when(analyticsService).logClickEvent(any(UrlMapping.class));
-
-        urlRedirectionService.getOriginalUrl("1");
-
-        // Analytics must always be called — even if URL came from cache
-        verify(analyticsService).logClickEvent(mapping);
+        verify(urlCacheService).evictCache("abc");
     }
 
     @Test
-    @DisplayName("getOriginalUrl: short code not found → throws UrlNotFoundException")
+    @DisplayName("getOriginalUrl: URL not found → throws UrlNotFoundException")
     void getOriginalUrl_notFound_throwsUrlNotFoundException() {
-        when(urlMappingRepository.findByShortUrl("missing")).thenReturn(Optional.empty());
+        when(urlCacheService.fetchCachedData("missing"))
+                .thenThrow(new UrlNotFoundException("missing"));
 
         assertThrows(UrlNotFoundException.class,
                 () -> urlRedirectionService.getOriginalUrl("missing"));
     }
 
     @Test
-    @DisplayName("getOriginalUrl: returns the correct original URL")
-    void getOriginalUrl_returnsOriginalUrl() {
-        UrlMapping mapping = new UrlMapping();
-        mapping.setShortUrl("abc");
-        mapping.setOriginalUrl("https://leetcode.com/u/Harinath_E07/");
+    @DisplayName("getOriginalUrl: analytics is always called on every redirect")
+    void getOriginalUrl_alwaysCallsAnalytics() {
+        CachedUrlData cached = new CachedUrlData(
+                1L,
+                "https://www.google.com",
+                null
+        );
 
-        when(urlMappingRepository.findByShortUrl("abc")).thenReturn(Optional.of(mapping));
+        when(urlCacheService.fetchCachedData("1")).thenReturn(cached);
+        doNothing().when(analyticsService).logClickEvent(any(UrlMapping.class));
 
-        String result = urlRedirectionService.getOriginalUrl("abc");
+        urlRedirectionService.getOriginalUrl("1");
 
-        assertEquals("https://leetcode.com/u/Harinath_E07/", result);
+        verify(analyticsService).logClickEvent(any(UrlMapping.class));
+    }
+
+    @Test
+    @DisplayName("getOriginalUrl: URL with future expiry is not treated as expired")
+    void getOriginalUrl_futureExpiry_doesNotThrow() {
+        CachedUrlData cached = new CachedUrlData(
+                1L,
+                "https://example.com",
+                LocalDateTime.now().plusDays(7)
+        );
+
+        when(urlCacheService.fetchCachedData("xyz")).thenReturn(cached);
+
+        assertDoesNotThrow(() -> urlRedirectionService.getOriginalUrl("xyz"));
     }
 }

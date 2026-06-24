@@ -11,6 +11,7 @@ import com.url.shortener.models.User;
 import com.url.shortener.repository.UrlMappingRepository;
 import com.url.shortener.repository.UserRepository;
 import com.url.shortener.service.AnalyticsService;
+import com.url.shortener.service.UrlCacheService;
 import com.url.shortener.service.UrlShorteningService;
 import com.url.shortener.exception.ForbiddenOperationException;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ public class UrlController {
     private final UrlMappingRepository urlMappingRepository;
     private final UserRepository       userRepository;
     private final AnalyticsService     analyticsService;
+    private final UrlCacheService      urlCacheService;
 
     private void verifyOwnership(
             UrlMapping mapping,
@@ -103,6 +105,9 @@ public class UrlController {
         // Only the owner may delete their own link
         verifyOwnership(mapping, principal);
         urlMappingRepository.delete(mapping);
+
+        // Evict Redis cache so stale entries can't serve deleted URLs
+        urlCacheService.evictCache(shortCode);
 
         return ResponseEntity.noContent().build();
     }

@@ -1,18 +1,19 @@
 package com.url.shortener.service;
 
-import com.url.shortener.exception.UrlNotFoundException;
+import com.url.shortener.dto.CachedUrlData;
+import com.url.shortener.exception.UrlExpiredException;
 import com.url.shortener.models.UrlMapping;
-import com.url.shortener.repository.UrlMappingRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 
 @Service
 @RequiredArgsConstructor
 public class UrlRedirectionService {
 
-    private final UrlMappingRepository urlMappingRepository;
+    private final UrlCacheService urlCacheService;
     private final AnalyticsService analyticsService;
 
     /**
@@ -21,30 +22,20 @@ public class UrlRedirectionService {
      * even when the URL is returned from Redis cache.
      */
     public String getOriginalUrl(String shortUrl) {
-        // Step 1: URL lookup (cached in Redis)
-        String originalUrl = fetchOriginalUrl(shortUrl);
+        CachedUrlData cached = urlCacheService.fetchCachedData(shortUrl);
 
-        // Step 2: Ensure it hasn't expired and analytics always runs
-        UrlMapping mapping = urlMappingRepository.findByShortUrl(shortUrl)
-                .orElseThrow(() -> new UrlNotFoundException(shortUrl));
+        if( cached.expireAt() != null && cached.expireAt().isBefore(LocalDateTime.now())){
+            urlCacheService.evictCache(shortUrl);
 
-        if (mapping.getExpiresAt() != null && mapping.getExpiresAt().isBefore(java.time.LocalDateTime.now())) {
-            throw new com.url.shortener.exception.UrlExpiredException(shortUrl);
+            throw new UrlExpiredException(shortUrl);
         }
+        UrlMapping shell = new UrlMapping();
+        shell.setId(cached.id());
 
-        analyticsService.logClickEvent(mapping);
+        analyticsService.logClickEvent(shell);
 
-        return originalUrl;
+        return cached.originalUrl();
     }
 
-    /**
-     * Cached URL lookup — only hits the DB on a cache miss.
-     * Analytics is deliberately NOT called here so it isn't skipped on cache hits.
-     */
-    @Cacheable(value = "urls", key = "#shortUrl")
-    public String fetchOriginalUrl(String shortUrl) {
-        return urlMappingRepository.findByShortUrl(shortUrl)
-                .map(UrlMapping::getOriginalUrl)
-                .orElseThrow(() -> new UrlNotFoundException(shortUrl));
-    }
+
 }

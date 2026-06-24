@@ -9,6 +9,8 @@ import com.url.shortener.security.CustomUserDetailsService;
 import com.url.shortener.security.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -41,7 +45,7 @@ public class AuthController {
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole("ROLE_USER");
-        
+
         userRepository.save(user);
 
         return ResponseEntity.ok("User registered successfully");
@@ -56,6 +60,35 @@ public class AuthController {
         final UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
         final String jwt = jwtUtil.generateToken(userDetails);
 
-        return ResponseEntity.ok(new AuthResponse(jwt, request.getUsername()));
+        // Store JWT in an HttpOnly, Secure, SameSite=Strict cookie
+        // so JavaScript cannot read it (XSS-safe)
+        ResponseCookie cookie = ResponseCookie.from("jwt", jwt)
+                .httpOnly(true)           // JS cannot access this cookie
+                .secure(true)             // Only transmitted over HTTPS
+                .sameSite("Strict")       // Not sent on cross-site requests (CSRF protection)
+                .path("/")
+                .maxAge(Duration.ofHours(10))
+                .build();
+
+        // Token is NOT returned in the body — only set as a cookie
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new AuthResponse(null, request.getUsername()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        // Overwrite the cookie with an empty value and maxAge=0 to delete it from the browser
+        ResponseCookie deleteCookie = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .build();
     }
 }
