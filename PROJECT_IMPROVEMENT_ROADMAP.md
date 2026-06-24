@@ -1,4 +1,4 @@
-﻿# Brevly URL Shortener — Improvement Roadmap
+# Brevly URL Shortener — Improvement Roadmap
 
 A full-stack URL shortener built with React, Spring Boot, PostgreSQL, and Redis. The application supports authentication, short-link creation, expiration, redirects, click analytics, QR codes, and per-user link management.
 
@@ -56,6 +56,7 @@ flowchart LR
 - [x] Expiry validation (rejects zero or negative expiryDays)
 - [x] Database constraints (username, email, short code unique; NOT NULL enforced)
 - [x] Secure token storage (JWT in HttpOnly, Secure, SameSite=Strict cookie; logout clears cookie)
+- [x] CSRF protection (Double-Submit Cookie Pattern using CookieCsrfTokenRepository and axios interceptor)
 
 ### P1 — Redis and Redirect Correctness (DONE)
 
@@ -69,10 +70,6 @@ flowchart LR
 ---
 
 ## Pending Work
-
-### P0 — Security (In Progress)
-
-- [ ] Re-enable CSRF protection (JWT in HttpOnly cookie is auto-sent by browser; need CookieCsrfTokenRepository double-submit pattern)
 
 ### P1 — Auth Improvements
 
@@ -120,7 +117,7 @@ flowchart LR
 - [x] Working Redis cache and eviction (proxy fix, DTO caching, eviction on delete/expiry)
 - [x] Redis resilience (CacheErrorHandler graceful degradation)
 - [x] Cache integration tests (31 backend tests passing)
-- [ ] CSRF protection (in progress)
+- [x] CSRF protection
 - [ ] Fix frontend lint
 
 ### Phase 2 — Improve Reliability and Maintainability (Estimated 20-30 hours)
