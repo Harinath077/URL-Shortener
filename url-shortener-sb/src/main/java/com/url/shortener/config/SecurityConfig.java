@@ -66,13 +66,13 @@ public class SecurityConfig {
     }
 
 
-    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:5173}")
-    private String frontendUrl;
+    @org.springframework.beans.factory.annotation.Value("#{'${cors.allowed-origins:http://localhost:5173}'.split(',')}")
+    private List<String> allowedOrigins;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", frontendUrl));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
