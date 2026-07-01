@@ -18,21 +18,20 @@ export default function Analytics() {
   const redirectBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
   useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/analytics/${code}?days=${days}`);
+        setData(res.data);
+      } catch {
+        addToast('Failed to load analytics', 'error');
+        navigate('/dashboard');
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchStats();
-  }, [code, days]);
-
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get(`/analytics/${code}?days=${days}`);
-      setData(res.data);
-    } catch (err) {
-      addToast('Failed to load analytics', 'error');
-      navigate('/dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [code, days, addToast, navigate]);
 
   const copyLink = () => {
     navigator.clipboard.writeText(`${redirectBase}/${code}`);
@@ -45,7 +44,7 @@ export default function Analytics() {
       await api.delete(`/urls/${code}`);
       addToast('Link deleted successfully', 'success');
       navigate('/dashboard');
-    } catch (err) {
+    } catch {
       addToast('Failed to delete link', 'error');
     }
   };

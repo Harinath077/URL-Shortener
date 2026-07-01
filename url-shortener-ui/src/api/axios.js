@@ -32,14 +32,66 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401 — clear stale user state and redirect to login
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  failedQueue = [];
+};
+
+// Interceptor to handle 401 Unauthorized errors and perform automatic token refresh
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('user_info');
-      window.location.href = '/login';
+  async (err) => {
+    const originalRequest = err.config;
+
+    // If 401 occurs and it is not a retry and not a login/refresh request
+    if (
+      err.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url.includes('/auth/login') &&
+      !originalRequest.url.includes('/auth/refresh')
+    ) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        await api.post('/auth/refresh');
+        isRefreshing = false;
+        processQueue(null);
+        return api(originalRequest);
+      } catch (refreshErr) {
+        isRefreshing = false;
+        processQueue(refreshErr);
+
+        // Revoke state if refresh token is also invalid or expired
+        localStorage.removeItem('user_info');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(refreshErr);
+      }
     }
+
     return Promise.reject(err);
   }
 );

@@ -57,6 +57,7 @@ flowchart LR
 - [x] Database constraints (username, email, short code unique; NOT NULL enforced)
 - [x] Secure token storage (JWT in HttpOnly, Secure, SameSite=Strict cookie; logout clears cookie)
 - [x] CSRF protection (Double-Submit Cookie Pattern using CookieCsrfTokenRepository and axios interceptor)
+- [x] Refresh token rotation (short-lived 15-minute access token + long-lived 7-day secure refresh token, rotated automatically)
 
 ### P1 — Redis and Redirect Correctness (DONE)
 
@@ -70,10 +71,6 @@ flowchart LR
 ---
 
 ## Pending Work
-
-### P1 — Auth Improvements
-
-- [ ] Refresh token mechanism (Access Token 15 min + Refresh Token 7 days opaque UUID hashed in DB; rotation on every refresh)
 
 ### P1 — Analytics Reliability
 
@@ -118,12 +115,12 @@ flowchart LR
 - [x] Redis resilience (CacheErrorHandler graceful degradation)
 - [x] Cache integration tests (31 backend tests passing)
 - [x] CSRF protection
-- [ ] Fix frontend lint
+- [x] Fix frontend lint
 
 ### Phase 2 — Improve Reliability and Maintainability (Estimated 20-30 hours)
 
 - [ ] Flyway migrations, database indexes, pagination
-- [ ] Refresh token authentication
+- [x] Refresh token authentication
 - [ ] Actuator health checks and metrics
 - [ ] Environment variable validation on startup
 - [ ] Graceful shutdown and HikariCP configuration
